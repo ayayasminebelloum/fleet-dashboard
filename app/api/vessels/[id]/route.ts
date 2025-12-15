@@ -14,14 +14,15 @@ function createClient() {
 
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const client = createClient();
   
   try {
     await client.connect();
     console.log("✅ Connected to Postgres for vessel detail");
-    const vesselId = params.id;
+    const vesselId = id;
 
     // Get vessel details
     const vesselRes = await client.query(`

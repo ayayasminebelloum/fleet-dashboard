@@ -20,6 +20,11 @@ function normalizeHealth(x: number | null) {
 
 export async function GET() {
   console.log("🚀 Starting vessels API call...");
+  console.log("🔧 Environment check:", {
+    DB_HOST: process.env.DB_HOST ? "✅ SET" : "❌ MISSING",
+    DB_USER: process.env.DB_USER ? "✅ SET" : "❌ MISSING", 
+    DB_PASSWORD: process.env.DB_PASSWORD ? "✅ SET" : "❌ MISSING"
+  });
   
   const client = createClient();
   

@@ -164,9 +164,8 @@ export default function HomePage() {
         }
       } catch (error) {
         console.error('Error fetching vessels:', error);
-        // Fallback to mock data if API fails
-        setVessels(MOCK_VESSELS);
-        setSelected(MOCK_VESSELS[0]);
+        // No fallback - show error or empty state
+        setVessels([]);
       } finally {
         setLoading(false);
       }

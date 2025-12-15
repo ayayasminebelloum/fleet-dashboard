@@ -4,8 +4,8 @@ import { Client } from "pg";
 function createClient() {
   return new Client({
     host: process.env.DB_HOST || "aws-0-us-east-1.pooler.supabase.com",
-    port: parseInt(process.env.DB_PORT || "6543"),
-    user: process.env.DB_USER || "postgres.atvqkntixckpyspxvgca",
+    port: parseInt(process.env.DB_PORT || "6543"), 
+    user: process.env.DB_USER || "postgres",
     password: process.env.DB_PASSWORD || "VesselIQ@2025",
     database: process.env.DB_NAME || "postgres",
     ssl: { rejectUnauthorized: false }

@@ -3,11 +3,11 @@ import { Client } from "pg";
 
 function createClient() {
   return new Client({
-    host: "db.atvqkntixckpyspxvgca.supabase.co",
-    port: 5432,
-    user: "postgres",
-    password: "VesselIQ@2025",
-    database: "postgres",
+    host: process.env.DB_HOST || "db.atvqkntixckpyspxvgca.supabase.co",
+    port: parseInt(process.env.DB_PORT || "5432"),
+    user: process.env.DB_USER || "postgres",
+    password: process.env.DB_PASSWORD || "VesselIQ@2025",
+    database: process.env.DB_NAME || "postgres",
     ssl: { rejectUnauthorized: false }
   });
 }

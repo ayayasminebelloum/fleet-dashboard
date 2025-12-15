@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 /* ---------------------------------------------------------
    TYPES
@@ -11,13 +11,11 @@ type VesselStatus = "healthy" | "watch" | "critical";
 type Vessel = {
   id: string;
   name: string;
-  imo?: string;
+  imo: string;
   health: number; // 0–1
   status: VesselStatus;
-  lastUpdate: string | null;
+  lastUpdate: string;
   location?: string;
-  latitude?: number;
-  longitude?: number;
 };
 
 type DownloadCategory = "raw" | "stats" | "models" | "anomalies";
@@ -122,71 +120,22 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 
 export default function HomePage() {
   const [screen, setScreen] = useState<Screen>("login");
-  const [vessels, setVessels] = useState<Vessel[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState<Vessel | null>(null);
+  const [selected, setSelected] = useState<Vessel | null>(MOCK_VESSELS[0]);
   const [filter, setFilter] = useState<"all" | VesselStatus>("all");
   const [search, setSearch] = useState("");
 
-  // Fetch vessels from API
-  useEffect(() => {
-    const fetchVessels = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch('/api/vessels');
-        if (!response.ok) throw new Error('Failed to fetch vessels');
-        const data = await response.json();
-        
-        // Transform API data to match Vessel type
-        const transformedVessels: Vessel[] = data.map((v: any) => {
-          const health = v.health || 0;
-          const status: VesselStatus = 
-            health > 0.7 ? "healthy" : 
-            health > 0.4 ? "watch" : "critical";
-          
-          return {
-            id: v.id,
-            name: v.name,
-            imo: `IMO${v.id}`, // Generate IMO since not in API
-            health,
-            status,
-            lastUpdate: v.lastUpdate,
-            location: v.latitude && v.longitude ? 
-              `${v.latitude.toFixed(2)}, ${v.longitude.toFixed(2)}` : undefined,
-            latitude: v.latitude,
-            longitude: v.longitude
-          };
-        });
-        
-        setVessels(transformedVessels);
-        if (transformedVessels.length > 0) {
-          setSelected(transformedVessels[0]);
-        }
-      } catch (error) {
-        console.error('Error fetching vessels:', error);
-        // Fallback to mock data if API fails
-        setVessels(MOCK_VESSELS);
-        setSelected(MOCK_VESSELS[0]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const total = MOCK_VESSELS.length;
+  const healthy = MOCK_VESSELS.filter((v) => v.status === "healthy").length;
+  const watch = MOCK_VESSELS.filter((v) => v.status === "watch").length;
+  const critical = MOCK_VESSELS.filter((v) => v.status === "critical").length;
 
-    fetchVessels();
-  }, []);
-
-  const total = vessels.length;
-  const healthy = vessels.filter((v) => v.status === "healthy").length;
-  const watch = vessels.filter((v) => v.status === "watch").length;
-  const critical = vessels.filter((v) => v.status === "critical").length;
-
-  const filtered = vessels.filter((v) => {
+  const filtered = MOCK_VESSELS.filter((v) => {
     const matchFilter = filter === "all" ? true : v.status === filter;
     const matchSearch =
       search.trim().length === 0
         ? true
         : v.name.toLowerCase().includes(search.toLowerCase()) ||
-          (v.imo && v.imo.includes(search));
+          v.imo.includes(search);
     return matchFilter && matchSearch;
   });
 
@@ -197,10 +146,10 @@ export default function HomePage() {
 
   const handleSelectByName = (label: string) => {
     const v =
-      vessels.find((vv) =>
+      MOCK_VESSELS.find((vv) =>
         vv.name.toLowerCase().includes(label.toLowerCase())
-      ) || (vessels.length > 0 ? vessels[0] : null);
-    if (v) handleSelectVessel(v);
+      ) || MOCK_VESSELS[0];
+    handleSelectVessel(v);
   };
 
   /* ---------------------- LOGIN GATE ---------------------- */
@@ -274,26 +223,17 @@ export default function HomePage() {
 
         {/* FLEET */}
         {screen === "fleet" && (
-          <>
-            {loading && (
-              <div className="flex justify-center py-8">
-                <div className="text-slate-400">Loading vessels...</div>
-              </div>
-            )}
-            {!loading && (
-              <FleetOverview
-                vessels={vessels}
-                filtered={filtered}
-                filter={filter}
-                setFilter={setFilter}
-                search={search}
-                setSearch={setSearch}
-                selected={selected}
-                onOpenVessel={handleSelectVessel}
-                onMarkerClick={handleSelectByName}
-              />
-            )}
-          </>
+          <FleetOverview
+            vessels={MOCK_VESSELS}
+            filtered={filtered}
+            filter={filter}
+            setFilter={setFilter}
+            search={search}
+            setSearch={setSearch}
+            selected={selected}
+            onOpenVessel={handleSelectVessel}
+            onMarkerClick={handleSelectByName}
+          />
         )}
 
         {/* VESSEL DETAIL */}
@@ -332,7 +272,7 @@ export default function HomePage() {
 
         {/* DOWNLOAD CENTER */}
         {screen === "download" && (
-          <DownloadDataScreen vessels={vessels} onBack={() => setScreen("fleet")} />
+          <DownloadDataScreen onBack={() => setScreen("fleet")} />
         )}
       </div>
     </main>
@@ -589,7 +529,7 @@ function VesselDetailScreen({
 
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <MiniMetric label="Position" value={vessel.location || "N/A"} />
-            <MiniMetric label="Last update" value={vessel.lastUpdate || "N/A"} />
+            <MiniMetric label="Last update" value={vessel.lastUpdate} />
           </div>
 
           <p className="mt-2 text-[11px] text-slate-500">
@@ -622,14 +562,8 @@ function VesselDetailScreen({
         <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-2">
           <p className="text-[10px] text-slate-400">Top Risk Sensors</p>
           <ul className="mt-1 list-disc pl-4 text-[11px]">
-            <li>CT1.1 - Compression Temperature 1.1</li>
-            <li>CT1.2 - Compression Temperature 1.2</li>
-            <li>CT1.3 - Compression Temperature 1.3</li>
-            <li>CT2.1 - Compression Temperature 2.1</li>
-            <li>PT1.1 - Pressure Transducer 1.1</li>
-            <li>PT1.2 - Pressure Transducer 1.2</li>
-            <li>FT1.1 - Flow Transducer 1.1</li>
-            <li>TT1.1 - Temperature Transducer 1.1</li>
+            <li>Tank Pressure – Forward</li>
+            <li>Tank Volume – Aft</li>
           </ul>
         </div>
       </div>
@@ -693,44 +627,19 @@ function VesselDetailScreen({
           <p className="mb-1 text-[11px] text-slate-400">
             {tab === "overview"
               ? "Aggregated hybrid score with anomaly regions."
-              : tab === "custom" 
-              ? "Sensor view: custom – time-series with anomaly shading."
-              : `Sensor view: ${tab.replace('pressure', 'compression temperatures').replace('temperature', 'temperature sensors').replace('volume', 'flow measurements')} – time-series with anomaly shading.`}
+              : `Sensor view: ${tab} – time-series with anomaly shading.`}
           </p>
 
           <div className="flex-1 rounded-lg bg-slate-900 relative overflow-hidden">
-            {/* Realistic time-series data */}
-            <svg className="absolute inset-0 w-full h-full">
-              {/* AE Error - realistic sensor noise with spikes in anomaly zones */}
-              <path
-                d="M0,32 L15,33 L30,31 L45,34 L60,29 L75,31 L90,45 L105,52 L120,48 L135,32 L150,30 L165,33 L180,31 L195,29 L210,31 L225,33 L240,28 L255,30 L270,32 L285,29 L300,35 L315,42 L330,38 L345,31 L360,29 L375,32 L390,30 L400,31"
-                stroke="#38bdf8"
-                strokeWidth="1.5"
-                fill="none"
-                opacity="0.8"
-              />
-              {/* GRU Error - shows clear anomaly patterns */}
-              <path
-                d="M0,64 L20,66 L40,63 L60,65 L80,68 L100,82 L120,95 L140,88 L160,75 L180,68 L200,66 L220,64 L240,62 L260,65 L280,63 L300,78 L320,85 L340,81 L360,70 L380,66 L400,64"
-                stroke="#fbbf24"
-                strokeWidth="1.5"
-                fill="none"
-                opacity="0.8"
-              />
-              {/* Hybrid Score - drops during anomalies, more stable otherwise */}
-              <path
-                d="M0,100 L25,102 L50,98 L75,101 L100,85 L125,72 L150,78 L175,95 L200,102 L225,100 L250,98 L275,101 L300,88 L325,82 L350,86 L375,98 L400,100"
-                stroke="#10b981"
-                strokeWidth="2"
-                fill="none"
-                opacity="0.9"
-              />
-            </svg>
+            {/* fake lines */}
+            <div className="absolute inset-x-0 top-8 h-0.5 bg-gradient-to-r from-sky-500/40 via-sky-300/60 to-sky-500/40" />
+            <div className="absolute inset-x-0 top-16 h-0.5 bg-gradient-to-r from-amber-500/40 via-amber-300/60 to-amber-500/40" />
+            <div className="absolute inset-x-0 top-24 h-0.5 bg-gradient-to-r from-emerald-500/40 via-emerald-300/60 to-emerald-500/40" />
 
-            {/* More realistic anomaly zones with varied widths */}
-            <div className="absolute left-[22%] top-0 h-full w-[18%] bg-rose-500/10 border-x border-rose-500/30" />
-            <div className="absolute left-[72%] top-0 h-full w-[12%] bg-rose-500/10 border-x border-rose-500/30" />
-            <span className="absolute left-[22%] top-1 text-[10px] text-rose-300">
+            {/* anomaly zones */}
+            <div className="absolute left-1/4 top-0 h-full w-1/6 bg-rose-500/10 border-x border-rose-500/30" />
+            <div className="absolute left-3/4 top-0 h-full w-1/7 bg-rose-500/10 border-x border-rose-500/30" />
+            <span className="absolute left-1/4 top-1 text-[10px] text-rose-300">
               Anomaly zone
             </span>
           </div>
@@ -833,7 +742,7 @@ function ModelEvaluationScreen({
                   {
                     time: "2025-11-24 09:58",
                     vessel: "VESSEL 3",
-                    sensor: "CT1.1 - Compression Temp",
+                    sensor: "Pressure FWD",
                     model: "AE + GRU",
                     severity: "High",
                   },
@@ -958,7 +867,7 @@ function AnalyticsHubScreen({
    DOWNLOAD DATA SCREEN
 --------------------------------------------------------- */
 
-function DownloadDataScreen({ vessels, onBack }: { vessels: Vessel[]; onBack: () => void }) {
+function DownloadDataScreen({ onBack }: { onBack: () => void }) {
   const [category, setCategory] = useState<DownloadCategory | null>(null);
 
   // Raw data
@@ -968,12 +877,11 @@ function DownloadDataScreen({ vessels, onBack }: { vessels: Vessel[]; onBack: ()
   const [endDate, setEndDate] = useState("");
   const rawColumns = [
     "timestamp",
-    "compression_temp",
-    "pressure_reading",
-    "flow_rate",
+    "pressure",
     "temperature",
+    "volume",
+    "flow_rate",
     "status",
-    "value",
   ];
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
 
@@ -1077,7 +985,6 @@ function DownloadDataScreen({ vessels, onBack }: { vessels: Vessel[]; onBack: ()
       {/* flows */}
       {category === "raw" && (
         <RawDataSelector
-          vessels={vessels}
           rawVessel={rawVessel}
           setRawVessel={setRawVessel}
           rawSensor={rawSensor}
@@ -1119,7 +1026,7 @@ function DownloadDataScreen({ vessels, onBack }: { vessels: Vessel[]; onBack: ()
 
       {category === "anomalies" && (
         <AnomalySelector
-          vessels={vessels}
+          vessels={MOCK_VESSELS}
           anomalyVessel={anomalyVessel}
           setAnomalyVessel={setAnomalyVessel}
           anomalies={anomalyTypes}
@@ -1161,7 +1068,6 @@ function SelectCard({
 }
 
 function RawDataSelector({
-  vessels,
   rawVessel,
   setRawVessel,
   rawSensor,
@@ -1188,7 +1094,7 @@ function RawDataSelector({
           className="w-full bg-slate-800 border border-slate-600 p-2 rounded text-xs"
         >
           <option value="">-- Choose vessel --</option>
-          {vessels.map((v: Vessel) => (
+          {MOCK_VESSELS.map((v) => (
             <option key={v.id} value={v.name}>
               {v.name}
             </option>
@@ -1206,15 +1112,10 @@ function RawDataSelector({
             className="w-full bg-slate-800 border border-slate-600 p-2 rounded text-xs"
           >
             <option value="">-- Choose sensor --</option>
-            <option value="CT1.1">CT1.1 - Compression Temperature</option>
-            <option value="CT1.2">CT1.2 - Compression Temperature</option>
-            <option value="CT1.3">CT1.3 - Compression Temperature</option>
-            <option value="CT2.1">CT2.1 - Compression Temperature</option>
-            <option value="CT2.2">CT2.2 - Compression Temperature</option>
-            <option value="PT1.1">PT1.1 - Pressure Transducer</option>
-            <option value="PT1.2">PT1.2 - Pressure Transducer</option>
-            <option value="FT1.1">FT1.1 - Flow Transducer</option>
-            <option value="TT1.1">TT1.1 - Temperature Transducer</option>
+            <option value="pressure">Pressure</option>
+            <option value="volume">Volume</option>
+            <option value="temperature">Temperature</option>
+            <option value="flow_rate">Flow Rate</option>
           </select>
         </div>
       )}
@@ -1459,19 +1360,6 @@ function AnomalySelector({
 function DataExplorationScreen({ onBack }: { onBack: () => void }) {
   return (
     <section className="space-y-4">
-      {/* back button */}
-      <div className="flex items-center gap-3 mb-2">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition-colors"
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Analytics Hub
-        </button>
-      </div>
-      
       {/* breadcrumb */}
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-1 text-slate-400">
@@ -1594,19 +1482,6 @@ function DataExplorationScreen({ onBack }: { onBack: () => void }) {
 function StatisticalDiagnosticsScreen({ onBack }: { onBack: () => void }) {
   return (
     <section className="space-y-4">
-      {/* back button */}
-      <div className="flex items-center gap-3 mb-2">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition-colors"
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Analytics Hub
-        </button>
-      </div>
-      
       {/* breadcrumb */}
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-1 text-slate-400">
@@ -1661,16 +1536,10 @@ function StatisticalDiagnosticsScreen({ onBack }: { onBack: () => void }) {
             </p>
           </div>
           <div className="mt-3">
-            <div className="relative h-64 bg-slate-800/50 rounded border border-slate-700">
-              <img 
-                src="/CHI/average_chi_per_subsystem.png" 
-                alt="Average CHI per Subsystem Analysis"
-                className="w-full h-full object-contain rounded"
-              />
-              <div className="absolute bottom-1 left-2 text-[10px] text-slate-400">
-                CHI Health Index by Subsystem
-              </div>
-            </div>
+            <FakeChartBlock
+              title="ADF Rolling Statistics"
+              caption="Rolling mean & variance used for ADF (mock)"
+            />
           </div>
         </div>
 
@@ -1680,16 +1549,10 @@ function StatisticalDiagnosticsScreen({ onBack }: { onBack: () => void }) {
           <p className="text-xs text-slate-400 mb-3">
             Change detection using rolling windows and drift thresholds.
           </p>
-          <div className="relative h-64 bg-slate-800/50 rounded border border-slate-700">
-            <img 
-              src="/drift_analysis.png" 
-              alt="Variance Drift Analysis"
-              className="w-full h-full object-contain rounded"
-            />
-            <div className="absolute bottom-1 left-2 text-[10px] text-slate-400">
-              Rolling Window Variance Drift Detection
-            </div>
-          </div>
+          <FakeChartBlock
+            title="Variance Drift Signal"
+            caption="Highlights windows of increased volatility (mock)"
+          />
         </div>
       </div>
 
@@ -1706,16 +1569,10 @@ function StatisticalDiagnosticsScreen({ onBack }: { onBack: () => void }) {
             <li>Kurtosis: 3.11 (near-normal)</li>
           </ul>
           <div className="mt-3">
-            <div className="relative h-64 bg-slate-800/50 rounded border border-slate-700">
-              <img 
-                src="/outliers/senosrCT020_01.png" 
-                alt="CT020_01 Statistical Distribution Analysis"
-                className="w-full h-full object-contain rounded"
-              />
-              <div className="absolute bottom-1 left-2 text-[10px] text-slate-400">
-                Sensor CT020_01
-              </div>
-            </div>
+            <FakeChartBlock
+              title="QQ Plot (mock)"
+              caption="Approximate normality with deviations in upper tail"
+            />
           </div>
         </div>
 
@@ -1739,16 +1596,10 @@ function StatisticalDiagnosticsScreen({ onBack }: { onBack: () => void }) {
           <p className="text-xs text-slate-400 mb-3">
             Rolling mean, variance and their stability over time.
           </p>
-          <div className="relative h-64 bg-slate-800/50 rounded border border-slate-700">
-            <img 
-              src="/rolling_mean&variance.png" 
-              alt="Rolling Mean and Variance Analysis"
-              className="w-full h-full object-contain rounded"
-            />
-            <div className="absolute bottom-1 left-2 text-[10px] text-slate-400">
-              Rolling Statistical Moments Analysis
-            </div>
-          </div>
+          <FakeChartBlock
+            title="Rolling Mean & Variance"
+            caption="Window-based fluctuation insight (mock)"
+          />
         </div>
 
         {/* summary */}
@@ -1778,19 +1629,6 @@ function StatisticalDiagnosticsScreen({ onBack }: { onBack: () => void }) {
 function CorrelationAnalysisScreen({ onBack }: { onBack: () => void }) {
   return (
     <section className="space-y-4">
-      {/* back button */}
-      <div className="flex items-center gap-3 mb-2">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition-colors"
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Analytics Hub
-        </button>
-      </div>
-      
       {/* breadcrumb */}
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-1 text-slate-400">
@@ -1832,16 +1670,10 @@ function CorrelationAnalysisScreen({ onBack }: { onBack: () => void }) {
           <p className="text-xs text-slate-400 mb-3">
             Linear correlation between sensors.
           </p>
-          <div className="relative h-80 bg-slate-800/50 rounded border border-slate-700">
-            <img 
-              src="/correlation/sensor correlation heatmap.png" 
-              alt="Sensor Correlation Heatmap Analysis"
-              className="w-full h-full object-contain rounded"
-            />
-            <div className="absolute bottom-1 left-2 text-[10px] text-slate-400">
-              Pearson Correlation Matrix
-            </div>
-          </div>
+          <FakeChartBlock
+            title="Pearson Heatmap"
+            caption="Shows strong linear relationships (mock)"
+          />
           <ul className="text-xs text-slate-300 mt-3 space-y-1">
             <li>Pressure ↔ Volume: 0.81</li>
             <li>Temp ↔ Flow Rate: 0.44</li>
@@ -1854,16 +1686,10 @@ function CorrelationAnalysisScreen({ onBack }: { onBack: () => void }) {
           <p className="text-xs text-slate-400 mb-3">
             Rank-order monotonic relationships.
           </p>
-          <div className="relative h-80 bg-slate-800/50 rounded border border-slate-700">
-            <img 
-              src="/correlation/sensor_clustering_by_correlation.png" 
-              alt="Sensor Clustering by Correlation Analysis"
-              className="w-full h-full object-contain rounded"
-            />
-            <div className="absolute bottom-1 left-2 text-[10px] text-slate-400">
-              Hierarchical Sensor Clustering Dendrogram
-            </div>
-          </div>
+          <FakeChartBlock
+            title="Spearman Heatmap"
+            caption="Captures non-linear monotonic relationships (mock)"
+          />
           <ul className="text-xs text-slate-300 mt-3 space-y-1">
             <li>Pressure ↔ Temperature: 0.73</li>
             <li>Flow Rate ↔ Volume: 0.51</li>
@@ -1879,16 +1705,7 @@ function CorrelationAnalysisScreen({ onBack }: { onBack: () => void }) {
           <p className="text-xs text-slate-400 mb-3">
             Cross-correlation function reveals lead-lag relationships.
           </p>
-          <div className="relative h-64 bg-slate-800/50 rounded border border-slate-700">
-            <img 
-              src="/correlation/rolling correlation sensor 27.png" 
-              alt="Rolling Correlation Analysis for Sensor 27"
-              className="w-full h-full object-contain rounded"
-            />
-            <div className="absolute bottom-1 left-2 text-[10px] text-slate-400">
-              Lag-Based Cross Correlation Function
-            </div>
-          </div>
+          <FakeChartBlock title="Lag Correlation" caption="CCF plot (mock)" />
           <ul className="text-xs text-slate-300 space-y-1 mt-3">
             <li>Pressure leads Volume by 2–3 timesteps</li>
             <li>Temperature lags Flow Rate by ~4 timesteps</li>
@@ -1961,19 +1778,6 @@ function CorrelationAnalysisScreen({ onBack }: { onBack: () => void }) {
 function OutlierVerificationScreen({ onBack }: { onBack: () => void }) {
   return (
     <section className="space-y-4">
-      {/* back button */}
-      <div className="flex items-center gap-3 mb-2">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition-colors"
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Analytics Hub
-        </button>
-      </div>
-      
       {/* breadcrumb */}
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-1 text-slate-400">
@@ -2015,16 +1819,10 @@ function OutlierVerificationScreen({ onBack }: { onBack: () => void }) {
           <p className="text-xs text-slate-400 mb-3">
             Tree-based anomaly detector identifying sparse, isolated points.
           </p>
-          <div className="relative h-64 bg-slate-800/50 rounded border border-slate-700">
-            <img 
-              src="/outliers/daily outlier ratio.png" 
-              alt="Daily Outlier Ratio Analysis"
-              className="w-full h-full object-contain rounded"
-            />
-            <div className="absolute bottom-1 left-2 text-[10px] text-slate-400">
-              Daily Outlier Ratio
-            </div>
-          </div>
+          <FakeChartBlock
+            title="Isolation Forest Anomaly Score"
+            caption="Scores across time (mock)"
+          />
           <ul className="text-xs text-slate-300 mt-3 space-y-1">
             <li>Anomaly threshold: 0.62</li>
             <li>High-confidence anomalies: 9</li>
@@ -2036,16 +1834,10 @@ function OutlierVerificationScreen({ onBack }: { onBack: () => void }) {
           <p className="text-xs text-slate-400 mb-3">
             Outliers based on deviation from mean (threshold ±3σ).
           </p>
-          <div className="relative h-64 bg-slate-800/50 rounded border border-slate-700">
-            <img 
-              src="/outliers/sensorCT015_01.png" 
-              alt="CT015_01 Z-Score Outlier Analysis"
-              className="w-full h-full object-contain rounded"
-            />
-            <div className="absolute bottom-1 left-2 text-[10px] text-slate-400">
-              Sensor CT015_01
-            </div>
-          </div>
+          <FakeChartBlock
+            title="Z-Score Timeline"
+            caption="Values breaching σ thresholds (mock)"
+          />
           <ul className="text-xs text-slate-300 mt-3 space-y-1">
             <li>Z &gt; 3: 5 events</li>
             <li>Z &lt; -3: 2 events</li>
@@ -2063,16 +1855,10 @@ function OutlierVerificationScreen({ onBack }: { onBack: () => void }) {
           <p className="text-xs text-slate-400 mb-3">
             Reconstruction error spikes and forecast mismatches.
           </p>
-          <div className="relative h-64 bg-slate-800/50 rounded border border-slate-700">
-            <img 
-              src="/outliers/sensorCT019_01.png" 
-              alt="CT019_01 Machine Learning Anomaly Detection"
-              className="w-full h-full object-contain rounded"
-            />
-            <div className="absolute bottom-1 left-2 text-[10px] text-slate-400">
-              Sensor CT019_01
-            </div>
-          </div>
+          <FakeChartBlock
+            title="AE & GRU Errors"
+            caption="Highlighted deviations (mock)"
+          />
           <ul className="text-xs text-slate-300 mt-3 space-y-1">
             <li>AE high spikes: 6</li>
             <li>GRU forecast errors: 11</li>
@@ -2084,16 +1870,10 @@ function OutlierVerificationScreen({ onBack }: { onBack: () => void }) {
           <p className="text-xs text-slate-400 mb-3">
             Overlay of all anomaly categories across time.
           </p>
-          <div className="relative h-64 bg-slate-800/50 rounded border border-slate-700">
-            <img 
-              src="/outliers/sensorCT029.png" 
-              alt="CT029 Unified Anomaly Timeline Analysis"
-              className="w-full h-full object-contain rounded"
-            />
-            <div className="absolute bottom-1 left-2 text-[10px] text-slate-400">
-              Sensor CT029
-            </div>
-          </div>
+          <FakeChartBlock
+            title="Unified Anomaly Timeline"
+            caption="All anomaly signals aligned (mock)"
+          />
         </div>
       </div>
 
@@ -2104,16 +1884,10 @@ function OutlierVerificationScreen({ onBack }: { onBack: () => void }) {
           <p className="text-xs text-slate-400 mb-3">
             Cluster grouping using Isolation Forest vectors + AE error embeddings.
           </p>
-          <div className="relative h-64 bg-slate-800/50 rounded border border-slate-700">
-            <img 
-              src="/outliers/sensorCT053_01.png" 
-              alt="CT053_01 Anomaly Cluster Analysis"
-              className="w-full h-full object-contain rounded"
-            />
-            <div className="absolute bottom-1 left-2 text-[10px] text-slate-400">
-              Sensor CT053_01
-            </div>
-          </div>
+          <FakeChartBlock
+            title="Cluster Map"
+            caption="Cluster visualization (mock)"
+          />
           <ul className="text-xs text-slate-300 mt-3 space-y-1">
             <li>Cluster A — Stable (6 sensors)</li>
             <li>Cluster B — Mild anomalies (4 sensors)</li>
@@ -2471,36 +2245,9 @@ function FakeChartBlock({
         </p>
       </div>
       <div className="h-32 rounded-lg bg-slate-950/80 relative overflow-hidden">
-        {/* Realistic AE Error line with variations */}
-        <svg className="absolute inset-0 w-full h-full">
-          {/* AE Error with realistic sensor variations */}
-          <path
-            d="M0,25 L20,26 L40,24 L60,27 L80,35 L100,42 L120,38 L140,26 L160,24 L180,25 L200,23 L220,26 L240,24 L260,25 L280,32 L300,38 L320,35 L340,26 L360,24 L380,25 L400,23"
-            stroke="#38bdf8"
-            strokeWidth="1"
-            fill="none"
-            opacity="0.7"
-          />
-          {/* GRU Error with clear anomaly spikes */}
-          <path
-            d="M0,50 L25,52 L50,48 L75,51 L100,65 L125,72 L150,68 L175,52 L200,50 L225,48 L250,51 L275,49 L300,63 L325,68 L350,65 L375,52 L400,50"
-            stroke="#fbbf24"
-            strokeWidth="1"
-            fill="none"
-            opacity="0.7"
-          />
-          {/* Hybrid Score drops during anomalies */}
-          <path
-            d="M0,80 L30,82 L60,78 L90,80 L120,65 L150,58 L180,62 L210,78 L240,80 L270,82 L300,68 L330,62 L360,65 L390,78 L400,80"
-            stroke="#10b981"
-            strokeWidth="1.5"
-            fill="none"
-            opacity="0.8"
-          />
-        </svg>
-        {/* Realistic anomaly zones */}
-        <div className="absolute left-[24%] top-0 h-full w-[16%] bg-rose-500/10 border-x border-rose-500/40" />
-        <div className="absolute left-[72%] top-0 h-full w-[14%] bg-rose-500/10 border-x border-rose-500/40" />
+        <div className="absolute inset-x-0 top-8 h-0.5 bg-gradient-to-r from-sky-500/40 via-sky-300/60 to-sky-500/40" />
+        <div className="absolute inset-x-0 top-16 h-0.5 bg-gradient-to-r from-emerald-500/40 via-emerald-300/60 to-emerald-500/40" />
+        <div className="absolute left-1/3 top-0 h-full w-1/7 bg-rose-500/10 border-x border-rose-500/40" />
       </div>
       <p className="text-[11px] text-slate-400">{caption}</p>
     </div>

@@ -1,0 +1,115 @@
+table_name,column_name,data_type,is_nullable,column_default
+dashboard_cache,cache_id,bigint,NO,nextval('dashboard_cache_cache_id_seq'::regclass)
+dashboard_cache,sensor_id,uuid,YES,null
+dashboard_cache,metric_name,text,YES,null
+dashboard_cache,metric_value,double precision,YES,null
+dashboard_cache,generated_at,timestamp with time zone,YES,now()
+detected_outliers,outlier_id,bigint,NO,nextval('detected_outliers_outlier_id_seq'::regclass)
+detected_outliers,sensor_id,uuid,NO,null
+detected_outliers,timestamp,timestamp with time zone,NO,null
+detected_outliers,value,double precision,YES,null
+detected_outliers,value_norm,double precision,YES,null
+detected_outliers,outlier_type,text,YES,null
+detected_outliers,model_score,double precision,YES,null
+detected_outliers,created_at,timestamp with time zone,YES,now()
+hybrid_health,id,bigint,NO,nextval('hybrid_health_id_seq'::regclass)
+hybrid_health,sensor_id,uuid,YES,null
+hybrid_health,sensor_name,text,YES,null
+hybrid_health,timestamp,timestamp with time zone,YES,null
+hybrid_health,value,double precision,YES,null
+hybrid_health,value_status,double precision,YES,null
+hybrid_health,value_norm,double precision,YES,null
+hybrid_health,ae_norm,double precision,YES,null
+hybrid_health,gru_norm,double precision,YES,null
+hybrid_health,regression_sri,double precision,YES,null
+hybrid_health,reg_norm,double precision,YES,null
+hybrid_health,hybridhealth,double precision,YES,null
+hybrid_health,hybridhealth_norm,double precision,YES,null
+hybrid_health,healthscore,double precision,YES,null
+hybrid_health,created_at,timestamp with time zone,YES,now()
+model_ae_outputs,id,bigint,NO,nextval('model_ae_outputs_id_seq'::regclass)
+model_ae_outputs,vessel_id,uuid,YES,null
+model_ae_outputs,timestamp,timestamp without time zone,NO,null
+model_ae_outputs,ae_reconstruction_error,double precision,NO,null
+model_ae_outputs,anomaly,boolean,YES,false
+model_ae_outputs,created_at,timestamp without time zone,YES,now()
+model_gru_outputs,id,bigint,NO,nextval('model_gru_outputs_id_seq'::regclass)
+model_gru_outputs,timestamp,timestamp with time zone,YES,null
+model_gru_outputs,gru_forecast_error,double precision,YES,null
+model_gru_outputs,gru_prediction,double precision,YES,null
+model_gru_outputs,gru_actual,double precision,YES,null
+model_gru_outputs,gru_residual,double precision,YES,null
+model_gru_outputs,gru_abs_error,double precision,YES,null
+model_gru_outputs,created_at,timestamp with time zone,YES,now()
+raw_sensor_readings,id,bigint,NO,nextval('raw_sensor_readings_id_seq'::regclass)
+raw_sensor_readings,timestamp,timestamp with time zone,YES,null
+raw_sensor_readings,value,double precision,YES,null
+raw_sensor_readings,valuestatus,double precision,YES,null
+raw_sensor_readings,exportdate,timestamp with time zone,YES,null
+raw_sensor_readings,exportversion,text,YES,null
+raw_sensor_readings,exporttype,integer,YES,null
+raw_sensor_readings,timestampprecisiontype,integer,YES,null
+raw_sensor_readings,exportfrom,text,YES,null
+raw_sensor_readings,exportto,text,YES,null
+raw_sensor_readings,includebadvalues,boolean,YES,null
+raw_sensor_readings,totalevents,integer,YES,null
+raw_sensor_readings,totalgoodvalues,integer,YES,null
+raw_sensor_readings,totalbadvalues,integer,YES,null
+raw_sensor_readings,lowestfrequency,double precision,YES,null
+raw_sensor_readings,highestfrequency,double precision,YES,null
+raw_sensor_readings,averagefrequency,double precision,YES,null
+raw_sensor_readings,firstrecordedtimestamp,timestamp with time zone,YES,null
+raw_sensor_readings,lastrecordedtimestamp,timestamp with time zone,YES,null
+raw_sensor_readings,exportedfromserver,text,YES,null
+raw_sensor_readings,pipointname,text,YES,null
+raw_sensor_readings,pointsource,text,YES,null
+raw_sensor_readings,pointtype,text,YES,null
+raw_sensor_readings,digitalset,double precision,YES,null
+raw_sensor_readings,exceptiondeviation,double precision,YES,null
+raw_sensor_readings,exceptionmaximum,integer,YES,null
+raw_sensor_readings,exceptionminimum,integer,YES,null
+raw_sensor_readings,exceptionpercentage,double precision,YES,null
+raw_sensor_readings,descriptor,text,YES,null
+raw_sensor_readings,span,double precision,YES,null
+raw_sensor_readings,zero,double precision,YES,null
+raw_sensor_readings,engineeringunits,double precision,YES,null
+raw_sensor_readings,compressing,integer,YES,null
+raw_sensor_readings,step,integer,YES,null
+raw_sensor_readings,compressiondeviation,double precision,YES,null
+raw_sensor_readings,compressionmaximum,integer,YES,null
+raw_sensor_readings,compressionminimum,integer,YES,null
+raw_sensor_readings,compressionpercentage,double precision,YES,null
+raw_sensor_readings,sanitizedfilename,text,YES,null
+raw_sensor_readings,sensor_id,text,YES,null
+sensor_quality,sensor_id,uuid,YES,null
+sensor_quality,sensor_name,text,YES,null
+sensor_quality,missing_rate,double precision,YES,null
+sensor_quality,flatline_pct,double precision,YES,null
+sensor_quality,large_gaps,integer,YES,null
+sensor_quality,records,integer,YES,null
+sensor_quality,adf_p_value,double precision,YES,null
+sensor_quality,trend_strength,double precision,YES,null
+sensor_quality,drift_strength_percent,double precision,YES,null
+sensor_quality,created_at,timestamp with time zone,YES,now()
+sensor_structural_health,id,bigint,NO,nextval('sensor_structural_health_id_seq'::regclass)
+sensor_structural_health,sensor_id,uuid,YES,null
+sensor_structural_health,sensor_name,text,YES,null
+sensor_structural_health,chi,double precision,YES,null
+sensor_structural_health,chi_band,text,YES,null
+sensor_structural_health,sri,double precision,YES,null
+sensor_structural_health,sri_band,text,YES,null
+sensor_structural_health,regression_sri,double precision,YES,null
+sensor_structural_health,created_at,timestamp with time zone,YES,now()
+sensors,sensor_id,uuid,NO,gen_random_uuid()
+sensors,vessel_id,uuid,NO,null
+sensors,raw_sensor_id,text,YES,null
+sensors,pi_point_name,text,YES,null
+sensors,point_source,text,YES,null
+sensors,point_type,text,YES,null
+sensors,created_at,timestamp with time zone,YES,now()
+sensors,subsystem,text,YES,null
+vessels,vessel_id,uuid,NO,gen_random_uuid()
+vessels,vessel_name,text,NO,null
+vessels,created_at,timestamp with time zone,YES,now()
+vessels,latitude,double precision,YES,null
+vessels,longitude,double precision,YES,null
